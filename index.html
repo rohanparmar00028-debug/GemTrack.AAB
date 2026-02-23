@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GemTrack - Final</title>
+    <style>
+        :root { --neon-cyan: #00e5ff; --bg-dark: #050a14; }
+        
+        body { 
+            /* મોબાઈલ પાથ માટે ./background.jpg વાપર્યું છે */
+            background: linear-gradient(rgba(5, 10, 20, 0.8), rgba(5, 10, 20, 0.8)), 
+                        url('./background.jpg'); 
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            color: white; 
+            margin: 0; 
+            padding: 20px; 
+            min-height: 100vh; 
+        }
+
+        .container { max-width: 450px; margin: 0 auto; width: 100%; }
+        #home-screen { display: flex; flex-direction: column; justify-content: flex-end; position: fixed; bottom: 30px; left: 20px; right: 20px; }
+        .neon-btn { width: 100%; padding: 14px; background: rgba(0, 229, 255, 0.1); border: 1.5px solid var(--neon-cyan); color: var(--neon-cyan); border-radius: 10px; font-weight: bold; font-size: 14px; margin-bottom: 15px; cursor: pointer; text-transform: uppercase; backdrop-filter: blur(5px); }
+        .hidden { display: none !important; }
+        .content-screen { margin-top: 10px; position: relative; z-index: 10; }
+        .glass-card { background: rgba(10, 25, 49, 0.85); border-radius: 15px; padding: 15px; border: 1px solid rgba(0, 229, 255, 0.2); backdrop-filter: blur(10px); }
+        input { width: 100%; padding: 10px; background: #0a1931; border: 1px solid var(--neon-cyan); color: white; border-radius: 8px; box-sizing: border-box; margin-bottom: 12px; text-align: center; font-size: 16px; }
+        .grid-row { display: grid; grid-template-columns: 0.5fr 1fr 0.8fr; gap: 10px; align-items: center; margin-bottom: 12px; background: rgba(0, 229, 255, 0.05); padding: 8px; border-radius: 8px; }
+        .fixed-footer { position: fixed; bottom: 20px; left: 20px; right: 20px; max-width: 410px; margin: 0 auto; z-index: 50; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: #1a1f2b; color: white; width: 85%; max-width: 350px; border-radius: 20px; padding: 20px; position: relative; border: 1px solid var(--neon-cyan); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,229,255,0.2); padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-body { font-family: monospace; line-height: 1.6; font-size: 15px; color: #e0e0e0; }
+        .modal-footer { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
+        .btn-modal { flex: 1; padding: 12px; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .info-btn { background: none; border: 1.5px solid var(--neon-cyan); color: var(--neon-cyan); border-radius: 50%; width: 22px; height: 22px; font-size: 12px; cursor: pointer; font-weight: bold; display: flex; justify-content: center; align-items: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="home-screen">
+            <button onclick="goTo('add-screen')" class="neon-btn">ADD RECORD</button>
+            <button onclick="goTo('view-screen')" class="neon-btn">VIEW HISTORY</button>
+            <button onclick="goTo('rates-screen')" class="neon-btn">SET RATES</button>
+        </div>
+        <div id="add-screen" class="hidden content-screen">
+            <button onclick="backToHome()" style="color:var(--neon-cyan); background:none; border:none; margin-bottom:15px; font-weight:bold; cursor:pointer;">← BACK</button>
+            <div class="glass-card"><input type="date" id="entry-date"><div id="add-grid"></div><button onclick="saveEntry(true)" class="neon-btn" style="background:var(--neon-cyan); color:black; margin-top: 10px;">SAVE RECORD</button></div>
+        </div>
+        <div id="view-screen" class="hidden content-screen">
+            <button onclick="backToHome()" style="color:var(--neon-cyan); background:none; border:none; margin-bottom:15px; font-weight:bold; cursor:pointer;">← BACK</button>
+            <div id="history-list" style="margin-bottom: 120px; padding-bottom: 20px;"></div>
+            <div class="fixed-footer glass-card"><div id="footer-qty" style="font-size: 16px; margin-bottom: 5px;">Total: 0 Pcs</div><div id="footer-rs" style="font-weight:bold; color:var(--neon-cyan); font-size:20px;">₹ 0.00</div></div>
+        </div>
+        <div id="rates-screen" class="hidden content-screen">
+            <button onclick="backToHome()" style="color:var(--neon-cyan); background:none; border:none; margin-bottom:15px; font-weight:bold; cursor:pointer;">← BACK</button>
+            <div class="glass-card"><div id="rates-grid"></div><button onclick="saveRates()" class="neon-btn" style="background:var(--neon-cyan); color:black; margin-top: 10px;">UPDATE RATES</button></div>
+        </div>
+    </div>
+    <div id="details-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><b id="modal-date" style="font-size: 18px; color: var(--neon-cyan);">તારીખ: 00/00/0000</b><span onclick="closeModal()" style="cursor:pointer; font-size: 20px;">&times;</span></div>
+            <div id="modal-body" class="modal-body"></div>
+            <div class="modal-footer"><button id="modal-del-btn" class="btn-modal" style="background: #ff4444; color: white;">🗑 Delete</button><button class="btn-modal" style="background: var(--neon-cyan); color: #050a14;" onclick="closeModal()">Okay</button></div>
+        </div>
+    </div>
+    <script>
+        const diamondTypes = ['A', 'B', 'C', 'D'];
+        let currentScreen = 'home-screen';
+        if (!localStorage.getItem('rates')) localStorage.setItem('rates', JSON.stringify({ 'A': 0, 'B': 0, 'C': 0, 'D': 0 }));
+        if (!localStorage.getItem('entries')) localStorage.setItem('entries', JSON.stringify([]));
+        window.onpopstate = function() { if (currentScreen !== 'home-screen') { backToHome(); history.pushState(null, null, null); } };
+        history.pushState(null, null, null);
+        function goTo(id) {
+            document.getElementById('home-screen').classList.add('hidden');
+            document.getElementById('add-screen').classList.add('hidden');
+            document.getElementById('view-screen').classList.add('hidden');
+            document.getElementById('rates-screen').classList.add('hidden');
+            document.getElementById(id).classList.remove('hidden');
+            currentScreen = id;
+            if (id === 'add-screen') initAddGrid();
+            if (id === 'view-screen') loadHistory();
+            if (id === 'rates-screen') loadRates();
+        }
+        function backToHome() {
+            if (currentScreen === 'add-screen') saveEntry(false);
+            if (currentScreen === 'rates-screen') autoSaveRates();
+            document.getElementById(currentScreen).classList.add('hidden');
+            document.getElementById('home-screen').classList.remove('hidden');
+            currentScreen = 'home-screen';
+        }
+        function initAddGrid() {
+            const grid = document.getElementById('add-grid');
+            const rates = JSON.parse(localStorage.getItem('rates'));
+            grid.innerHTML = '';
+            diamondTypes.forEach(t => { grid.innerHTML += `<div class="grid-row"><b>${t}</b><input type="number" id="qty-${t}" placeholder="0" inputmode="numeric"><small>₹${rates[t]}</small></div>`; });
+            document.getElementById('entry-date').valueAsDate = new Date();
+        }
+        function loadRates() {
+            const grid = document.getElementById('rates-grid');
+            const rates = JSON.parse(localStorage.getItem('rates'));
+            grid.innerHTML = '';
+            diamondTypes.forEach(t => { grid.innerHTML += `<div class="grid-row"><b>${t}</b><input type="number" id="rate-input-${t}" value="${rates[t]}" inputmode="numeric"></div>`; });
+        }
+        function autoSaveRates() {
+            const rates = {};
+            diamondTypes.forEach(t => { const val = document.getElementById(`rate-input-${t}`); if(val) rates[t] = parseFloat(val.value) || 0; });
+            localStorage.setItem('rates', JSON.stringify(rates));
+        }
+        function saveRates() { autoSaveRates(); backToHome(); }
+        function saveEntry(isManual) {
+            const dateInput = document.getElementById('entry-date');
+            if (!dateInput) return;
+            const date = dateInput.value;
+            const rates = JSON.parse(localStorage.getItem('rates'));
+            let entries = JSON.parse(localStorage.getItem('entries')) || [];
+            let hasData = false;
+            diamondTypes.forEach(t => {
+                const el = document.getElementById(`qty-${t}`);
+                if (el) {
+                    const val = parseInt(el.value) || 0;
+                    if (val > 0) {
+                        entries.push({ id: Date.now() + Math.random(), date: date, type: t, qty: val, rate: rates[t], total: val * rates[t] });
+                        hasData = true;
+                        el.value = ""; 
+                    }
+                }
+            });
+            if (hasData) localStorage.setItem('entries', JSON.stringify(entries));
+            if (isManual) backToHome();
+        }
+        function loadHistory() {
+            const entries = JSON.parse(localStorage.getItem('entries')) || [];
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            const grouped = {};
+            entries.forEach(e => {
+                if (!grouped[e.date]) grouped[e.date] = { totalRs: 0, A:0, B:0, C:0, D:0 };
+                if(e.type && grouped[e.date][e.type] !== undefined) grouped[e.date][e.type] += e.qty;
+                grouped[e.date].totalRs += (e.total || 0);
+            });
+            let grandTotalQty = 0, grandTotalAmt = 0;
+            const sortedDates = Object.keys(grouped).sort().reverse();
+            sortedDates.forEach(date => {
+                const data = grouped[date];
+                grandTotalAmt += data.totalRs;
+                const dayTotalQty = data.A + data.B + data.C + data.D;
+                grandTotalQty += dayTotalQty;
+                list.innerHTML += `<div class="glass-card" style="margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);"><div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,229,255,0.2); padding-bottom: 8px; margin-bottom: 8px;"><span style="font-weight: bold;">${date}</span><div style="display:flex; align-items:center; gap:10px;"><span style="font-weight: bold;">₹ ${data.totalRs.toFixed(2)}</span><button class="info-btn" onclick="showDetails('${date}')">i</button></div></div><div style="display: flex; justify-content: space-between; font-size: 13px;"><span>A : ${data.A}</span> | <span>B : ${data.B}</span> | <span>C : ${data.C}</span> | <span>D : ${data.D}</span></div></div>`;
+            });
+            document.getElementById('footer-qty').innerText = "Total: " + grandTotalQty + " Pcs";
+            document.getElementById('footer-rs').innerText = "₹ " + grandTotalAmt.toLocaleString();
+        }
+        function showDetails(date) {
+            const entries = JSON.parse(localStorage.getItem('entries')) || [];
+            const dayEntries = entries.filter(e => e.date === date);
+            const rates = JSON.parse(localStorage.getItem('rates'));
+            document.getElementById('modal-date').innerText = "તારીખ: " + date;
+            let html = "", total = 0;
+            diamondTypes.forEach(t => {
+                const qty = dayEntries.filter(e => e.type === t).reduce((sum, e) => sum + e.qty, 0);
+                const rate = rates[t] || 0;
+                const lineTotal = qty * rate;
+                total += lineTotal;
+                html += `${t} : ${qty} * ${rate} = ${lineTotal.toFixed(2)}<br>`;
+            });
+            html += `<br><b style="color: var(--neon-cyan)">ટોટલ = ${total.toFixed(2)}</b>`;
+            document.getElementById('modal-body').innerHTML = html;
+            document.getElementById('modal-del-btn').onclick = function() {
+                if(confirm(date + " નો બધો ડેટા ડીલીટ કરવો છે?")) {
+                    const newEntries = entries.filter(e => e.date !== date);
+                    localStorage.setItem('entries', JSON.stringify(newEntries));
+                    closeModal(); loadHistory();
+                }
+            };
+            document.getElementById('details-modal').style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('details-modal').style.display = 'none'; }
+    </script>
+</body>
+</html>
